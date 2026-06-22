@@ -1,0 +1,42 @@
+# Зависимости
+vendor/
+go.sum
+
+# Скомпилированные бинарники
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+game-server-monitor
+bot-arm64
+bot
+*.test
+*.out
+
+# Данные пользователей (не загружаем на GitHub)
+data/
+users.json
+
+# Конфиги с токеном
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Папки сборки
+tmp/
+temp/
+dist/
+build/
+
+# Отчёты
+coverage.txt
+*.log
