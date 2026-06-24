@@ -7,7 +7,9 @@ import (
 	"time"
 )
 
+// проверяю статус майнкрафт сервера
 func QueryMinecraft(ip string) (string, error) {
+	// добавляю порт если не указан
 	host, port, err := net.SplitHostPort(ip)
 	if err != nil {
 		host = ip
@@ -15,22 +17,28 @@ func QueryMinecraft(ip string) (string, error) {
 		ip = host + ":" + port
 	}
 
+	// подключаюсь к серверу
 	conn, err := net.DialTimeout("tcp", ip, 5*time.Second)
 	if err != nil {
 		return "", err
 	}
 	defer conn.Close()
 
+	// формирую handshake пакет
 	handshake := []byte{
-		0x00, 0x47, 0x00, 0x00, 0x00,
+		0x00,
+		0x47, 0x00, 0x00, 0x00,
 	}
+
 	hostBytes := []byte(host)
 	handshake = append(handshake, byte(len(hostBytes)))
 	handshake = append(handshake, hostBytes...)
+
 	p, _ := net.LookupPort("tcp", port)
 	handshake = append(handshake, byte(p>>8), byte(p&0xFF))
 	handshake = append(handshake, 0x01)
 
+	// отправляю запрос
 	_, err = conn.Write(handshake)
 	if err != nil {
 		return "", err
@@ -41,12 +49,14 @@ func QueryMinecraft(ip string) (string, error) {
 		return "", err
 	}
 
+	// читаю ответ
 	buf := make([]byte, 1024)
 	n, err := conn.Read(buf)
 	if err != nil {
 		return "", err
 	}
 
+	// ищу начало json
 	var jsonStart int
 	for i := 1; i < n; i++ {
 		if buf[i] == '{' {
@@ -58,6 +68,7 @@ func QueryMinecraft(ip string) (string, error) {
 		return "", fmt.Errorf("неверный ответ от сервера")
 	}
 
+	// парсю json
 	var status struct {
 		Version struct {
 			Name string `json:"name"`
@@ -79,6 +90,7 @@ func QueryMinecraft(ip string) (string, error) {
 		return "", err
 	}
 
+	// формирую отчет
 	result := "Статус: Онлайн\n"
 	if status.Description.Text != "" {
 		result += fmt.Sprintf("Название: %s\n", status.Description.Text)

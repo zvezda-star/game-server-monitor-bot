@@ -11,6 +11,7 @@ type Config struct {
 	BotToken string
 }
 
+// загружаю переменные из .env
 func Load() *Config {
 	err := godotenv.Load()
 	if err != nil {

@@ -19,12 +19,14 @@ type Storage struct {
 	Data     map[int64][]SavedServer
 }
 
+// создаю хранилище и загружаю данные
 func NewStorage(filePath string) (*Storage, error) {
 	s := &Storage{
 		filePath: filePath,
 		Data:     make(map[int64][]SavedServer),
 	}
 
+	// проверяю существует ли файл
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		if err := os.MkdirAll("data", 0755); err != nil {
 			return nil, err
@@ -36,11 +38,13 @@ func NewStorage(filePath string) (*Storage, error) {
 		return s, nil
 	}
 
+	// читаю данные из файла
 	fileData, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
+	// превращаю json в map
 	err = json.Unmarshal(fileData, &s.Data)
 	if err != nil {
 		s.Data = make(map[int64][]SavedServer)
@@ -53,6 +57,7 @@ func NewStorage(filePath string) (*Storage, error) {
 	return s, nil
 }
 
+// добавляю сервер пользователю
 func (s *Storage) AddServer(userID int64, server SavedServer) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -61,6 +66,7 @@ func (s *Storage) AddServer(userID int64, server SavedServer) error {
 	return s.save()
 }
 
+// удаляю сервер по номеру
 func (s *Storage) RemoveServer(userID int64, index int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -83,12 +89,14 @@ func (s *Storage) RemoveServer(userID int64, index int) error {
 	return s.save()
 }
 
+// получаю список серверов пользователя
 func (s *Storage) GetServers(userID int64) []SavedServer {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.Data[userID]
 }
 
+// сохраняю данные в json файл
 func (s *Storage) save() error {
 	fileData, err := json.MarshalIndent(s.Data, "", "  ")
 	if err != nil {
