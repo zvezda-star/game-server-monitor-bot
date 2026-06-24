@@ -7,65 +7,52 @@ import (
 	"time"
 )
 
-// проверяю статус майнкрафт сервера
 func QueryMinecraft(ip string) (string, error) {
 	// добавляю порт если не указан
-	host, port, err := net.SplitHostPort(ip)
-	if err != nil {
-		host = ip
-		port = "25565"
-		ip = host + ":" + port
+	if _, _, err := net.SplitHostPort(ip); err != nil {
+		ip = ip + ":25565"
 	}
 
-	// подключаюсь к серверу
+	// подключаюсь
 	conn, err := net.DialTimeout("tcp", ip, 5*time.Second)
 	if err != nil {
 		return "", err
 	}
 	defer conn.Close()
 
-	// формирую handshake пакет
+	// отправляю handshake
+	host, port, _ := net.SplitHostPort(ip)
 	handshake := []byte{
-		0x00,
-		0x47, 0x00, 0x00, 0x00,
+		0x00,                   // packet id
+		0x47, 0x00, 0x00, 0x00, // protocol version 755
 	}
-
 	hostBytes := []byte(host)
 	handshake = append(handshake, byte(len(hostBytes)))
 	handshake = append(handshake, hostBytes...)
-
 	p, _ := net.LookupPort("tcp", port)
 	handshake = append(handshake, byte(p>>8), byte(p&0xFF))
-	handshake = append(handshake, 0x01)
+	handshake = append(handshake, 0x01) // next state: status
 
-	// отправляю запрос
-	_, err = conn.Write(handshake)
-	if err != nil {
-		return "", err
-	}
-
-	_, err = conn.Write([]byte{0x00})
-	if err != nil {
-		return "", err
-	}
+	conn.Write(handshake)
+	conn.Write([]byte{0x00}) // запрос статуса
 
 	// читаю ответ
-	buf := make([]byte, 1024)
+	buf := make([]byte, 2048)
 	n, err := conn.Read(buf)
 	if err != nil {
 		return "", err
 	}
 
 	// ищу начало json
-	var jsonStart int
+	jsonStart := -1
 	for i := 1; i < n; i++ {
 		if buf[i] == '{' {
 			jsonStart = i
 			break
 		}
 	}
-	if jsonStart == 0 {
-		return "", fmt.Errorf("неверный ответ от сервера")
+	if jsonStart == -1 {
+		return "", fmt.Errorf("не найден json в ответе")
 	}
 
 	// парсю json

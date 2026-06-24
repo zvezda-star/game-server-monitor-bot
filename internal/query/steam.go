@@ -6,14 +6,10 @@ import (
 	"time"
 )
 
-// проверяю статус стим сервера
 func QuerySteam(ip string) (string, error) {
 	// добавляю порт если не указан
-	host, port, err := net.SplitHostPort(ip)
-	if err != nil {
-		host = ip
-		port = "27015"
-		ip = host + ":" + port
+	if _, _, err := net.SplitHostPort(ip); err != nil {
+		ip = ip + ":27015"
 	}
 
 	// подключаюсь по udp
@@ -30,7 +26,7 @@ func QuerySteam(ip string) (string, error) {
 
 	conn.SetDeadline(time.Now().Add(5 * time.Second))
 
-	// формирую a2s_info запрос
+	// отправляю a2s_info запрос
 	query := []byte{
 		0xFF, 0xFF, 0xFF, 0xFF,
 		0x54, 0x53, 0x6F, 0x75, 0x72, 0x63, 0x65, 0x20,
@@ -59,7 +55,7 @@ func QuerySteam(ip string) (string, error) {
 		offset = 9
 	}
 
-	// читаю название сервера
+	// название сервера
 	nameEnd := offset
 	for nameEnd < n && buf[nameEnd] != 0 {
 		nameEnd++
@@ -70,7 +66,7 @@ func QuerySteam(ip string) (string, error) {
 	serverName := string(buf[offset:nameEnd])
 	offset = nameEnd + 1
 
-	// читаю карту
+	// карта
 	mapEnd := offset
 	for mapEnd < n && buf[mapEnd] != 0 {
 		mapEnd++
@@ -81,7 +77,7 @@ func QuerySteam(ip string) (string, error) {
 	mapName := string(buf[offset:mapEnd])
 	offset = mapEnd + 1
 
-	// пропускаю папку
+	// папка игры
 	folderEnd := offset
 	for folderEnd < n && buf[folderEnd] != 0 {
 		folderEnd++
@@ -89,7 +85,7 @@ func QuerySteam(ip string) (string, error) {
 	folder := string(buf[offset:folderEnd])
 	offset = folderEnd + 1
 
-	// читаю название игры
+	// название игры
 	gameEnd := offset
 	for gameEnd < n && buf[gameEnd] != 0 {
 		gameEnd++
@@ -104,12 +100,12 @@ func QuerySteam(ip string) (string, error) {
 	maxPlayers := int(buf[offset+1])
 	offset += 2
 
-	offset += 2
+	offset += 2 // боты + тип
 
 	osType := buf[offset]
 	offset++
 
-	offset += 2
+	offset += 2 // пароль + vac
 
 	versionEnd := offset
 	for versionEnd < n && buf[versionEnd] != 0 {
@@ -117,7 +113,7 @@ func QuerySteam(ip string) (string, error) {
 	}
 	version := string(buf[offset:versionEnd])
 
-	// определяю игру по папке если название не пришло
+	// определяю игру по папке если не пришла
 	if gameName == "" {
 		switch folder {
 		case "cstrike":
